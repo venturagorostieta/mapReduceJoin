@@ -1,0 +1,71 @@
+<workflow-app name="oozieExample" xmlns="uri:oozie:workflow:0.4">
+    <start to="hdfscommands"/>
+	
+	<action name="hdfscommands">
+         <fs>
+            <delete path='hdfs://quickstart.cloudera:8020/user/cloudera/wordcount/output'/>
+			<delete path='hdfs://quickstart.cloudera:8020/user/cloudera/wordcount/result'/>                    
+        </fs>
+        <ok to="forkJobs"/>
+        <error to="kill"/>
+    </action>
+	
+	 <!-- <action name="shellJob"> -->
+		 <!-- <shell xmlns="uri:oozie:shell-action:0.1"> -->
+		 <!-- <job-tracker>${jobTracker}</job-tracker> -->
+		 <!-- <name-node>${nameNode}</name-node> -->
+		 <!-- <configuration> -->
+         <!-- <property> -->
+           <!-- <name>mapred.job.queue.name</name> -->
+           <!-- <value>${queueName}</value> -->
+         <!-- </property> -->
+       <!-- </configuration> -->
+		 <!-- <exec>hello.sh</exec> -->
+		 <!-- <file>/user/cloudera/oozieExample/hello.sh#hello.sh</file> -->
+		 <!-- </shell> -->
+		 <!-- <ok to="forkJobs"/> -->
+		 <!-- <error to="kill"/> -->
+	 <!-- </action> -->
+	
+   <fork name="forkJobs">
+        <path start="wordCount"/>
+        <path start="personJob"/>
+    </fork>
+		
+	<action name="wordCount">
+        <java>
+		
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+			
+            <main-class>com.cloudera.examples.WordCount</main-class>
+            <arg>/user/cloudera/wordcount/dictionary/alice29.txt</arg>
+            <arg>/user/cloudera/wordcount/result</arg>
+			 <file>wordCounter.jar</file>
+        <capture-output/>
+        </java>
+        <ok to="joinJobs"/>
+        <error to="kill"/>
+    </action>
+	
+    <action name="personJob">
+        <java>
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+			
+            <main-class>com.mapreduce.persons.PersonsDetails</main-class>
+            <arg>/user/cloudera/wordcount/input</arg>
+            <arg>/user/cloudera/wordcount/direcciones</arg>
+            <arg>/user/cloudera/wordcount/output</arg>
+        </java>
+        <ok to="joinJobs"/>
+        <error to="kill"/>
+    </action>
+	
+	<join name="joinJobs" to="end"/>
+		
+    <kill name="kill">
+        <message>Action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>
